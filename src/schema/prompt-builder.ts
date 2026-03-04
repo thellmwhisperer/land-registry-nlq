@@ -1,11 +1,8 @@
 import { readFileSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { resolve } from 'path';
 
 export function loadSemanticLayer(): string {
-  const path = resolve(__dirname, '../../semantic-layer.md');
+  const path = resolve(process.cwd(), 'semantic-layer.md');
   return readFileSync(path, 'utf-8');
 }
 
