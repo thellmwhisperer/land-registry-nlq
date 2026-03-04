@@ -1,8 +1,21 @@
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+import { existsSync, readFileSync } from 'fs';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+
+function findProjectRoot(from: string): string {
+  let dir = from;
+  while (dir !== dirname(dir)) {
+    if (existsSync(resolve(dir, 'package.json'))) return dir;
+    dir = dirname(dir);
+  }
+  return from;
+}
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const PROJECT_ROOT = findProjectRoot(__dirname);
 
 export function loadSemanticLayer(): string {
-  const path = resolve(process.cwd(), 'semantic-layer.md');
+  const path = resolve(PROJECT_ROOT, 'semantic-layer.md');
   return readFileSync(path, 'utf-8');
 }
 

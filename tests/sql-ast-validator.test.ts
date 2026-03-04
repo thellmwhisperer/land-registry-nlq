@@ -168,6 +168,17 @@ describe('sql-ast-validator', () => {
     }
   });
 
+  it('clamps outer LIMIT without touching subquery LIMIT', () => {
+    const sql = 'SELECT * FROM (SELECT * FROM property_sales LIMIT 5) x LIMIT 50000';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 5');
+      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).not.toContain('50000');
+    }
+  });
+
   it('preserves LIMIT when within the 1000 cap', () => {
     const sql = 'SELECT * FROM property_sales LIMIT 10';
     const result = validateSQLWithAST(sql);
