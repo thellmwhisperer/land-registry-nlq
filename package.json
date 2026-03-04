@@ -1,0 +1,31 @@
+{
+  "name": "land",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint src/ tests/ --fix",
+    "test": "vitest run",
+    "test:watch": "vitest --watch"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
+    "express": "^5.2.1",
+    "libpg-query": "^17.7.3",
+    "pg": "^8.19.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.3.3",
+    "@types/pg": "^8.18.0",
+    "@types/supertest": "^7.2.0",
+    "eslint": "^10.0.2",
+    "supertest": "^7.2.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1",
+    "vitest": "^3.2.4"
+  }
+}
