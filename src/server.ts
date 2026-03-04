@@ -6,7 +6,8 @@ app.use(express.json());
 
 app.post('/api/query', async (req, res, next) => {
   try {
-    const { question } = req.body;
+    const body = req.body as Record<string, unknown> | undefined;
+    const question = body?.question;
 
     if (!question || typeof question !== 'string') {
       res.status(400).json({ error: 'Missing "question" field in request body' });
@@ -22,7 +23,13 @@ app.post('/api/query', async (req, res, next) => {
 
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Error:', err.message);
-  res.status(500).json({ error: err.message });
+
+  const isValidationError = err.message.startsWith('Query rejected')
+    || err.message.includes('not allowed');
+
+  res.status(isValidationError ? 400 : 500).json({
+    error: isValidationError ? err.message : 'Internal server error',
+  });
 });
 
 const PORT = process.env.PORT || 3000;

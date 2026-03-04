@@ -8,12 +8,16 @@ if (!question) {
   process.exit(1);
 }
 
+let exitCode = 0;
+
 try {
   const result = await ask(question);
   console.log('\n' + JSON.stringify(result, null, 2));
 } catch (err) {
   console.error('Error:', err instanceof Error ? err.message : err);
-  process.exit(1);
+  exitCode = 1;
 } finally {
   await shutdown();
 }
+
+process.exit(exitCode);

@@ -10,7 +10,7 @@ There is a single table: `property_sales` in the `public` schema.
 
 | Column           | Type        | Nullable | Description |
 |------------------|-------------|----------|-------------|
-| id               | bigint      | NOT NULL | Auto generated primary key |
+| id               | bigint      | NOT NULL | Auto-generated primary key |
 | transaction_id   | text        | NULL     | Unique transaction reference from Land Registry |
 | price            | integer     | NOT NULL | Sale price in GBP (pounds sterling). Range: 1 to 900,000,000 |
 | date_of_transfer | date        | NOT NULL | Date the sale completed. Range: 1995-01-01 to 2025-12-24 |
@@ -77,7 +77,7 @@ There is a single table: `property_sales` in the `public` schema.
 
 ### property_type = 'O' (Other)
 
-Type 'O' represents commercial transactions, land deals, and non residential sales. When the user asks about "houses", "homes", "residential", or "property" in a residential context, **exclude type 'O'** by filtering `property_type IN ('D','S','T','F')`. Only include 'O' if the user explicitly asks about commercial or all property types.
+Type 'O' represents commercial transactions, land deals, and non-residential sales. When the user asks about "houses", "homes", "residential", or "property" in a residential context, **exclude type 'O'** by filtering `property_type IN ('D','S','T','F')`. Only include 'O' if the user explicitly asks about commercial or all property types.
 
 ## Important Query Rules
 

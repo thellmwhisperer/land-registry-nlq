@@ -10,13 +10,13 @@ export interface Answer {
   interpretation: string;
 }
 
-let astReady = false;
+let initPromise: Promise<void> | null = null;
 
 export async function ask(question: string): Promise<Answer> {
-  if (!astReady) {
-    await initASTValidator();
-    astReady = true;
+  if (!initPromise) {
+    initPromise = initASTValidator();
   }
+  await initPromise;
 
   console.log(`→ Question: ${question}`);
 

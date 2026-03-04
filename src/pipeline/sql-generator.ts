@@ -13,12 +13,12 @@ export async function generateSQL(question: string): Promise<string> {
     messages: [{ role: 'user', content: question }],
   });
 
-  const text = response.content[0];
-  if (text.type !== 'text' || !text.text.trim()) {
+  const textBlock = response.content.find((block) => block.type === 'text');
+  if (!textBlock || textBlock.type !== 'text' || !textBlock.text.trim()) {
     throw new Error('LLM returned empty response');
   }
 
-  const result = validateSQL(text.text);
+  const result = validateSQL(textBlock.text);
 
   if (!result.valid) {
     throw new Error(result.error);
