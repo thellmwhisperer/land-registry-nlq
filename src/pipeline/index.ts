@@ -14,7 +14,10 @@ let initPromise: Promise<void> | null = null;
 
 export async function ask(question: string): Promise<Answer> {
   if (!initPromise) {
-    initPromise = initASTValidator();
+    initPromise = initASTValidator().catch((err) => {
+      initPromise = null;
+      throw err;
+    });
   }
   await initPromise;
 

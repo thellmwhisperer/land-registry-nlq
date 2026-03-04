@@ -99,13 +99,21 @@ describe('sql-ast-validator', () => {
     }
   });
 
-  it('strips trailing line comments before injecting LIMIT', () => {
+  it('rejects LIMIT injection when trailing line comment would swallow it', () => {
     const sql = 'SELECT * FROM property_sales -- fetch all';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toBe('Failed to inject LIMIT safely');
+    }
+  });
+
+  it('injects LIMIT when query ends with a string literal containing --', () => {
+    const sql = "SELECT '--abc' AS x FROM property_sales";
     const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
       expect(result.sql).toContain('LIMIT 1000');
-      expect(result.sql).not.toContain('--');
     }
   });
 

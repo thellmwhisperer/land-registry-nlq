@@ -250,7 +250,7 @@ export function validateSQLWithAST(sql: string): ValidationResult {
   const aggregate = isAggregateQuery(selectStmt);
 
   if (!hasLimit && !aggregate) {
-    const trimmed = sql.replace(/--[^\n]*$/, '').trimEnd().replace(/;\s*$/, '');
+    const trimmed = sql.trimEnd().replace(/;\s*$/, '');
     const bounded = `${trimmed} LIMIT 1000`;
 
     try {

@@ -1,7 +1,7 @@
 import express from 'express';
 import { ask } from './pipeline';
 
-const app = express();
+export const app = express();
 app.use(express.json());
 
 app.post('/api/query', async (req, res, next) => {
@@ -21,14 +21,14 @@ app.post('/api/query', async (req, res, next) => {
   }
 });
 
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: Error & { status?: number }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Error:', err.message);
 
-  const isValidationError = err.message.startsWith('Query rejected')
-    || err.message.includes('not allowed');
+  const status = err.status
+    ?? (err.message.startsWith('Query rejected') || err.message.includes('not allowed') ? 400 : 500);
 
-  res.status(isValidationError ? 400 : 500).json({
-    error: isValidationError ? err.message : 'Internal server error',
+  res.status(status).json({
+    error: status < 500 ? err.message : 'Internal server error',
   });
 });
 
