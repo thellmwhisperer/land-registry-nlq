@@ -49,6 +49,21 @@ describe('sql-ast-validator', () => {
     expect(result.valid).toBe(false);
   });
 
+  it('rejects writable CTEs (DELETE inside CTE)', () => {
+    const sql = `WITH deleted AS (DELETE FROM property_sales WHERE price = 0 RETURNING *) SELECT * FROM deleted`;
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toContain('Write operations');
+    }
+  });
+
+  it('rejects writable CTEs (UPDATE inside CTE)', () => {
+    const sql = `WITH updated AS (UPDATE property_sales SET price = 0 RETURNING *) SELECT * FROM updated`;
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(false);
+  });
+
   it('allows SELECT with CASE expressions', () => {
     const sql = "SELECT CASE WHEN property_type = 'D' THEN 'Detached' ELSE 'Other' END AS type, COUNT(*) FROM property_sales GROUP BY type";
     const result = validateSQLWithAST(sql);
@@ -59,6 +74,15 @@ describe('sql-ast-validator', () => {
 
   it('auto injects LIMIT 1000 when no LIMIT clause is present on non aggregate queries', () => {
     const result = validateSQLWithAST('SELECT * FROM property_sales');
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1000');
+    }
+  });
+
+  it('injects LIMIT on scalar function queries (non-aggregate)', () => {
+    const sql = 'SELECT upper(town) FROM property_sales';
+    const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
       expect(result.sql).toContain('LIMIT 1000');

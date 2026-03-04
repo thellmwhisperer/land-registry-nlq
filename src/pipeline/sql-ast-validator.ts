@@ -14,6 +14,25 @@ const FORBIDDEN_FUNCTIONS = new Set([
   'lo_export',
 ]);
 
+const AGGREGATE_FUNCTIONS = new Set([
+  'avg',
+  'count',
+  'sum',
+  'min',
+  'max',
+  'percentile_cont',
+  'percentile_disc',
+  'array_agg',
+  'string_agg',
+]);
+
+const MUTATION_NODES = new Set([
+  'InsertStmt',
+  'UpdateStmt',
+  'DeleteStmt',
+  'MergeStmt',
+]);
+
 let moduleLoaded = false;
 
 async function ensureModule(): Promise<void> {
@@ -34,6 +53,22 @@ function collectCTENames(node: any): Set<string> {
     }
   }
   return names;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function hasMutationNodes(node: any): boolean {
+  if (node === null || node === undefined || typeof node !== 'object') return false;
+
+  if (Array.isArray(node)) {
+    return node.some((item) => hasMutationNodes(item));
+  }
+
+  for (const key of Object.keys(node)) {
+    if (MUTATION_NODES.has(key)) return true;
+    if (hasMutationNodes(node[key])) return true;
+  }
+
+  return false;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -70,6 +105,15 @@ function collectFromAST(node: any, tables: { schema?: string; name: string }[], 
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function hasAggregateFunctions(targetList: any[]): boolean {
+  const json = JSON.stringify(targetList);
+  for (const fn of AGGREGATE_FUNCTIONS) {
+    if (json.toLowerCase().includes(`"sval":"${fn}"`)) return true;
+  }
+  return false;
+}
+
 function isAggregateQuery(stmt: Record<string, unknown>): boolean {
   const targetList = stmt.targetList as Array<Record<string, unknown>> | undefined;
   if (!targetList) return false;
@@ -77,13 +121,7 @@ function isAggregateQuery(stmt: Record<string, unknown>): boolean {
   const hasGroupBy = Array.isArray(stmt.groupClause) && stmt.groupClause.length > 0;
   if (hasGroupBy) return true;
 
-  const hasFuncCall = JSON.stringify(targetList).includes('"FuncCall"');
-  const hasColumnRef = targetList.some((t: Record<string, unknown>) => {
-    const rt = t as { ResTarget?: { val?: Record<string, unknown> } };
-    return rt.ResTarget?.val && 'ColumnRef' in rt.ResTarget.val;
-  });
-
-  return hasFuncCall && !hasColumnRef;
+  return hasAggregateFunctions(targetList);
 }
 
 export function validateSQLWithAST(sql: string): ValidationResult {
@@ -112,6 +150,10 @@ export function validateSQLWithAST(sql: string): ValidationResult {
 
   if (!stmtWrapper.SelectStmt) {
     return { valid: false, error: 'Only SELECT statements are allowed' };
+  }
+
+  if (hasMutationNodes(stmtWrapper)) {
+    return { valid: false, error: 'Write operations are not allowed' };
   }
 
   const selectStmt = stmtWrapper.SelectStmt;

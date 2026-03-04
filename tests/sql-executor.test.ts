@@ -41,7 +41,7 @@ describe('executeSQL', () => {
       .mockResolvedValueOnce(undefined);
 
     await executeSQL('SELECT 1');
-    expect(mockQuery).toHaveBeenCalledWith('BEGIN');
+    expect(mockQuery).toHaveBeenCalledWith('BEGIN READ ONLY');
     expect(mockQuery).toHaveBeenCalledWith("SET LOCAL statement_timeout = '10s'");
     expect(mockQuery).toHaveBeenCalledWith('COMMIT');
   });

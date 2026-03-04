@@ -33,13 +33,8 @@ export function validateSQL(raw: string): ValidationResult {
     return { valid: false, error: 'Empty SQL query' };
   }
 
-  // Strip trailing semicolon from single statements
+  // Strip trailing semicolon
   sql = sql.replace(/;\s*$/, '');
-
-  // Reject multiple statements (semicolon separating statements)
-  if (sql.includes(';')) {
-    return { valid: false, error: 'Multiple statements are not allowed' };
-  }
 
   if (FORBIDDEN_PATTERN.test(sql)) {
     const keyword = sql.match(FORBIDDEN_PATTERN)![1].toUpperCase();

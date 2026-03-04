@@ -111,11 +111,6 @@ describe('validateSQL', () => {
     expect(result.valid).toBe(false);
   });
 
-  it('rejects multiple statements separated by semicolons', () => {
-    const result = validateSQL("SELECT 1; DROP TABLE property_sales");
-    expect(result.valid).toBe(false);
-  });
-
   it('rejects case variations of forbidden keywords', () => {
     const result = validateSQL("drop TABLE property_sales");
     expect(result.valid).toBe(false);

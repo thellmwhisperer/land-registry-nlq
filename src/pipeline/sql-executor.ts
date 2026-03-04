@@ -11,7 +11,7 @@ export async function executeSQL(sql: string): Promise<QueryResult> {
   const client = await pool.connect();
 
   try {
-    await client.query('BEGIN');
+    await client.query('BEGIN READ ONLY');
     await client.query("SET LOCAL statement_timeout = '10s'");
 
     const result = await client.query(sql);
