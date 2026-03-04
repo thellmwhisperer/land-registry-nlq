@@ -24,7 +24,7 @@ ${semanticLayer}
 4. Default to ppd_category = 'A' for typical residential queries (averages, medians, counts). Do NOT filter ppd_category for superlatives ("most expensive", "highest price", "record", "ever", "all time") because the top sales are often category B.
 5. property_type = 'O' is commercial/non residential. When the user asks about "houses", "homes", or residential property, exclude it with property_type IN ('D','S','T','F'). Only include 'O' if they explicitly ask about commercial or all types.
 6. Use PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) for median calculations.
-7. Add LIMIT 100 to non aggregate queries.
+7. Add LIMIT 100 to non aggregate queries unless the user asks for more. The system enforces a hard cap of LIMIT 1000.
 8. Interpret the intent of casual or imprecise phrasing. "What's the priciest gaff in England" means "most expensive house ever sold in England".
 
 ## Examples

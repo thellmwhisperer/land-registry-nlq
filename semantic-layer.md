@@ -177,7 +177,7 @@ SELECT COUNT(*) AS new_builds_sold
 FROM property_sales
 WHERE old_new = 'Y'
   AND ppd_category = 'A'
-  AND EXTRACT(YEAR FROM date_of_transfer) = 2024
+  AND EXTRACT(YEAR FROM date_of_transfer) = EXTRACT(YEAR FROM CURRENT_DATE) - 1
 ```
 
 **"Show me the cheapest freehold properties in Surrey"**

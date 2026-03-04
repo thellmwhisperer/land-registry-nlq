@@ -21,10 +21,10 @@ export async function ask(question: string): Promise<Answer> {
   }
   await initPromise;
 
-  console.log(`→ Question: ${question}`);
+  console.log('→ Generating SQL…');
 
   const sql = await generateSQL(question);
-  console.log(`→ SQL generated: ${sql}`);
+  console.log('→ SQL generated');
 
   const astResult = validateSQLWithAST(sql);
   if (!astResult.valid) {
