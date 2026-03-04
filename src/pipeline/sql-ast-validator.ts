@@ -167,7 +167,7 @@ function isAggregateQuery(stmt: SelectStmt): boolean {
   const hasGroupBy = Array.isArray(stmt.groupClause) && stmt.groupClause.length > 0;
   if (hasGroupBy) return true;
 
-  return hasAggregateFuncCall(stmt.targetList as unknown as ASTNode[]);
+  return hasAggregateFuncCall(stmt.targetList as ASTNode[]);
 }
 
 export function validateSQLWithAST(sql: string): ValidationResult {
@@ -250,7 +250,7 @@ export function validateSQLWithAST(sql: string): ValidationResult {
   const aggregate = isAggregateQuery(selectStmt);
 
   if (!hasLimit && !aggregate) {
-    const trimmed = sql.replace(/--[^\n]*$/, '').trimEnd();
+    const trimmed = sql.replace(/--[^\n]*$/, '').trimEnd().replace(/;\s*$/, '');
     const bounded = `${trimmed} LIMIT 1000`;
 
     try {

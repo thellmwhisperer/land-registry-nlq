@@ -1,5 +1,5 @@
 import express from 'express';
-import { ask } from './pipeline/index.js';
+import { ask } from './pipeline';
 
 const app = express();
 app.use(express.json());

@@ -1,6 +1,6 @@
 import { getPool } from '../db/client.js';
 
-export interface QueryResult {
+interface QueryResult {
   rows: Record<string, unknown>[];
   rowCount: number;
   fields: string[];
@@ -26,7 +26,7 @@ export async function executeSQL(sql: string): Promise<QueryResult> {
   } catch (err) {
     await client.query('ROLLBACK').catch(() => {});
     const message = err instanceof Error ? err.message : 'SQL execution failed';
-    throw new Error(message);
+    throw new Error(message, { cause: err });
   } finally {
     client.release();
   }

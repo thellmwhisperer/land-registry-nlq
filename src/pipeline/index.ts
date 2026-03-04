@@ -3,7 +3,7 @@ import { validateSQLWithAST, initASTValidator } from './sql-ast-validator.js';
 import { executeSQL } from './sql-executor.js';
 import { interpret } from './interpreter.js';
 
-export interface Answer {
+interface Answer {
   question: string;
   sql: string;
   rows: Record<string, unknown>[];
