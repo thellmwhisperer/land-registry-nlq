@@ -131,6 +131,15 @@ describe('sql-ast-validator', () => {
     }
   });
 
+  it('injects LIMIT when aggregate is only inside a scalar subquery', () => {
+    const sql = 'SELECT (SELECT COUNT(*) FROM property_sales) AS c FROM property_sales';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1000');
+    }
+  });
+
   it('does not inject LIMIT on aggregate queries', () => {
     const sql = 'SELECT COUNT(*) FROM property_sales';
     const result = validateSQLWithAST(sql);
@@ -146,6 +155,25 @@ describe('sql-ast-validator', () => {
     expect(result.valid).toBe(true);
     if (result.valid) {
       expect(result.sql).not.toContain('LIMIT 1000');
+    }
+  });
+
+  it('clamps LIMIT to 1000 when query specifies a higher value', () => {
+    const sql = 'SELECT * FROM property_sales LIMIT 50000';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).not.toContain('50000');
+    }
+  });
+
+  it('preserves LIMIT when within the 1000 cap', () => {
+    const sql = 'SELECT * FROM property_sales LIMIT 10';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 10');
     }
   });
 

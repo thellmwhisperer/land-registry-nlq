@@ -135,6 +135,9 @@ function hasAggregateFuncCall(node: ASTNode | ASTNode[]): boolean {
     return node.some((item) => hasAggregateFuncCall(item as ASTNode));
   }
 
+  // Don't recurse into subqueries — aggregates there don't make the outer query aggregate
+  if ('SubLink' in node) return false;
+
   const record = node as Record<string, ASTNode>;
 
   if ('FuncCall' in node) {
@@ -246,12 +249,13 @@ export function validateSQLWithAST(sql: string): ValidationResult {
     }
   }
 
-  const hasLimit = selectStmt.limitCount !== undefined;
+  const MAX_LIMIT = 1000;
   const aggregate = isAggregateQuery(selectStmt);
+  const hasLimit = selectStmt.limitCount !== undefined;
 
   if (!hasLimit && !aggregate) {
     const trimmed = sql.trimEnd().replace(/;\s*$/, '');
-    const bounded = `${trimmed} LIMIT 1000`;
+    const bounded = `${trimmed} LIMIT ${MAX_LIMIT}`;
 
     try {
       const check = parseSync(bounded) as ParseResult;
@@ -264,6 +268,15 @@ export function validateSQLWithAST(sql: string): ValidationResult {
     }
 
     return { valid: true, sql: bounded };
+  }
+
+  if (hasLimit && !aggregate) {
+    const limitNode = selectStmt.limitCount as ASTNode;
+    const ival = (limitNode as { A_Const?: { ival?: { ival?: number } } }).A_Const?.ival?.ival;
+    if (typeof ival === 'number' && ival > MAX_LIMIT) {
+      const clamped = sql.replace(/LIMIT\s+\d+/i, `LIMIT ${MAX_LIMIT}`);
+      return { valid: true, sql: clamped };
+    }
   }
 
   return { valid: true, sql };
