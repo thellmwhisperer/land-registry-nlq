@@ -1,4 +1,12 @@
 import { loadModule, parseSync } from 'libpg-query';
+import type {
+  ParseResult,
+  Node,
+  SelectStmt,
+  RangeVar,
+  FuncCall,
+  CommonTableExpr,
+} from '@pgsql/types';
 
 export type ValidationResult =
   | { valid: true; sql: string }
@@ -33,6 +41,8 @@ const MUTATION_NODES = new Set([
   'MergeStmt',
 ]);
 
+type ASTNode = Record<string, unknown>;
+
 let moduleLoaded = false;
 
 async function ensureModule(): Promise<void> {
@@ -42,83 +52,100 @@ async function ensureModule(): Promise<void> {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function collectCTENames(node: any): Set<string> {
+function collectCTENames(stmtNode: Node): Set<string> {
   const names = new Set<string>();
-  if (node?.SelectStmt?.withClause?.ctes) {
-    for (const cte of node.SelectStmt.withClause.ctes) {
-      if (cte.CommonTableExpr?.ctename) {
-        names.add(cte.CommonTableExpr.ctename);
+  if ('SelectStmt' in stmtNode && stmtNode.SelectStmt) {
+    const ctes = stmtNode.SelectStmt.withClause?.ctes;
+    if (ctes) {
+      for (const cte of ctes) {
+        if ('CommonTableExpr' in cte && cte.CommonTableExpr) {
+          const cteName = (cte.CommonTableExpr as CommonTableExpr).ctename;
+          if (cteName) {
+            names.add(cteName);
+          }
+        }
       }
     }
   }
   return names;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function hasMutationNodes(node: any): boolean {
+function hasMutationNodes(node: ASTNode | ASTNode[]): boolean {
   if (node === null || node === undefined || typeof node !== 'object') return false;
 
   if (Array.isArray(node)) {
-    return node.some((item) => hasMutationNodes(item));
+    return node.some((item) => hasMutationNodes(item as ASTNode));
   }
 
   for (const key of Object.keys(node)) {
     if (MUTATION_NODES.has(key)) return true;
-    if (hasMutationNodes(node[key])) return true;
+    if (hasMutationNodes((node as Record<string, ASTNode>)[key])) return true;
   }
 
   return false;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function collectFromAST(node: any, tables: { schema?: string; name: string }[], functions: string[]): void {
+function collectFromAST(
+  node: ASTNode,
+  tables: { schema?: string; name: string }[],
+  functions: string[],
+): void {
   if (node === null || node === undefined || typeof node !== 'object') return;
 
-  if (node.RangeVar) {
-    const rv = node.RangeVar;
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      collectFromAST(item as ASTNode, tables, functions);
+    }
+    return;
+  }
+
+  const record = node as Record<string, ASTNode>;
+
+  if ('RangeVar' in node) {
+    const rv = (node as { RangeVar: RangeVar }).RangeVar;
     tables.push({
       schema: rv.schemaname,
-      name: rv.relname,
+      name: rv.relname!,
     });
   }
 
-  if (node.FuncCall) {
-    const fc = node.FuncCall;
+  if ('FuncCall' in node) {
+    const fc = (node as { FuncCall: FuncCall }).FuncCall;
     if (fc.funcname) {
       for (const part of fc.funcname) {
-        if (part.String?.sval) {
-          functions.push(part.String.sval.toLowerCase());
+        if ('String' in part) {
+          const sval = (part as { String: { sval?: string } }).String.sval;
+          if (sval) {
+            functions.push(sval.toLowerCase());
+          }
         }
       }
     }
   }
 
-  if (Array.isArray(node)) {
-    for (const item of node) {
-      collectFromAST(item, tables, functions);
-    }
-  } else {
-    for (const key of Object.keys(node)) {
-      collectFromAST(node[key], tables, functions);
-    }
+  for (const key of Object.keys(record)) {
+    collectFromAST(record[key], tables, functions);
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function hasAggregateFuncCall(node: any): boolean {
+function hasAggregateFuncCall(node: ASTNode | ASTNode[]): boolean {
   if (node === null || node === undefined || typeof node !== 'object') return false;
 
   if (Array.isArray(node)) {
-    return node.some((item) => hasAggregateFuncCall(item));
+    return node.some((item) => hasAggregateFuncCall(item as ASTNode));
   }
 
-  if (node.FuncCall) {
-    const fc = node.FuncCall;
+  const record = node as Record<string, ASTNode>;
+
+  if ('FuncCall' in node) {
+    const fc = (node as { FuncCall: FuncCall }).FuncCall;
     if (fc.funcname) {
       for (const part of fc.funcname) {
-        if (part.String?.sval && AGGREGATE_FUNCTIONS.has(part.String.sval.toLowerCase())) {
-          return true;
+        if ('String' in part) {
+          const sval = (part as { String: { sval?: string } }).String.sval;
+          if (sval && AGGREGATE_FUNCTIONS.has(sval.toLowerCase())) {
+            return true;
+          }
         }
       }
     }
@@ -127,21 +154,20 @@ function hasAggregateFuncCall(node: any): boolean {
     }
   }
 
-  for (const key of Object.keys(node)) {
-    if (hasAggregateFuncCall(node[key])) return true;
+  for (const key of Object.keys(record)) {
+    if (hasAggregateFuncCall(record[key])) return true;
   }
 
   return false;
 }
 
-function isAggregateQuery(stmt: Record<string, unknown>): boolean {
-  const targetList = stmt.targetList as Array<Record<string, unknown>> | undefined;
-  if (!targetList) return false;
+function isAggregateQuery(stmt: SelectStmt): boolean {
+  if (!stmt.targetList) return false;
 
   const hasGroupBy = Array.isArray(stmt.groupClause) && stmt.groupClause.length > 0;
   if (hasGroupBy) return true;
 
-  return hasAggregateFuncCall(targetList);
+  return hasAggregateFuncCall(stmt.targetList as unknown as ASTNode[]);
 }
 
 export function validateSQLWithAST(sql: string): ValidationResult {
@@ -149,9 +175,9 @@ export function validateSQLWithAST(sql: string): ValidationResult {
     throw new Error('Call initASTValidator() before using validateSQLWithAST');
   }
 
-  let parsed;
+  let parsed: ParseResult;
   try {
-    parsed = parseSync(sql);
+    parsed = parseSync(sql) as ParseResult;
   } catch {
     return { valid: false, error: 'Failed to parse SQL' };
   }
@@ -167,16 +193,19 @@ export function validateSQLWithAST(sql: string): ValidationResult {
   }
 
   const stmtWrapper = stmts[0].stmt;
+  if (!stmtWrapper) {
+    return { valid: false, error: 'Empty SQL query' };
+  }
 
-  if (!stmtWrapper.SelectStmt) {
+  if (!('SelectStmt' in stmtWrapper)) {
     return { valid: false, error: 'Only SELECT statements are allowed' };
   }
 
-  if (hasMutationNodes(stmtWrapper)) {
+  if (hasMutationNodes(stmtWrapper as ASTNode)) {
     return { valid: false, error: 'Write operations are not allowed' };
   }
 
-  const selectStmt = stmtWrapper.SelectStmt;
+  const selectStmt = (stmtWrapper as { SelectStmt: SelectStmt }).SelectStmt;
 
   if (selectStmt.intoClause) {
     return { valid: false, error: 'SELECT INTO is not allowed' };
@@ -186,7 +215,7 @@ export function validateSQLWithAST(sql: string): ValidationResult {
 
   const tables: { schema?: string; name: string }[] = [];
   const functions: string[] = [];
-  collectFromAST(stmtWrapper, tables, functions);
+  collectFromAST(stmtWrapper as ASTNode, tables, functions);
 
   for (const fn of functions) {
     if (FORBIDDEN_FUNCTIONS.has(fn)) {
@@ -225,8 +254,9 @@ export function validateSQLWithAST(sql: string): ValidationResult {
     const bounded = `${trimmed} LIMIT 1000`;
 
     try {
-      const check = parseSync(bounded);
-      if (!check.stmts?.[0]?.stmt?.SelectStmt?.limitCount) {
+      const check = parseSync(bounded) as ParseResult;
+      const checkStmt = check.stmts?.[0]?.stmt;
+      if (!checkStmt || !('SelectStmt' in checkStmt) || !(checkStmt as { SelectStmt: SelectStmt }).SelectStmt.limitCount) {
         return { valid: false, error: 'Failed to inject LIMIT safely' };
       }
     } catch {
