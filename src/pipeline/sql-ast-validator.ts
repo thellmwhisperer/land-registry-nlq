@@ -272,13 +272,20 @@ export function validateSQLWithAST(sql: string): ValidationResult {
 
   if (hasLimit && !aggregate) {
     const limitNode = selectStmt.limitCount as ASTNode;
-    const aConst = (limitNode as { A_Const?: { ival?: { ival?: number }; location?: number } }).A_Const;
+    const aConst = (limitNode as { A_Const?: { ival?: { ival?: number }; isnull?: boolean; location?: number } }).A_Const;
     const ival = aConst?.ival?.ival;
+    const isNull = aConst?.isnull === true;
     const loc = aConst?.location;
-    if (typeof ival === 'number' && ival > MAX_LIMIT && typeof loc === 'number') {
-      const valStr = String(ival);
-      const clamped = sql.slice(0, loc) + String(MAX_LIMIT) + sql.slice(loc + valStr.length);
-      return { valid: true, sql: clamped };
+
+    const needsClamp = isNull || (typeof ival === 'number' && ival > MAX_LIMIT);
+
+    if (needsClamp && typeof loc === 'number') {
+      // location is a byte offset — use Buffer for correct slicing
+      const buf = Buffer.from(sql, 'utf-8');
+      const before = buf.subarray(0, loc).toString('utf-8');
+      const after = buf.subarray(loc).toString('utf-8');
+      const afterClamped = after.replace(/^(?:\d+|ALL|NULL)/i, String(MAX_LIMIT));
+      return { valid: true, sql: before + afterClamped };
     }
   }
 

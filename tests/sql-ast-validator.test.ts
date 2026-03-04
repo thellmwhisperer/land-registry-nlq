@@ -168,6 +168,36 @@ describe('sql-ast-validator', () => {
     }
   });
 
+  it('clamps LIMIT ALL to 1000', () => {
+    const sql = 'SELECT * FROM property_sales LIMIT ALL';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).not.toContain('ALL');
+    }
+  });
+
+  it('clamps LIMIT NULL to 1000', () => {
+    const sql = 'SELECT * FROM property_sales LIMIT NULL';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).not.toContain('NULL');
+    }
+  });
+
+  it('clamps LIMIT correctly when SQL contains non-ASCII before it', () => {
+    const sql = "SELECT 'ñ' AS x FROM property_sales LIMIT 50000";
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).not.toContain('50000');
+    }
+  });
+
   it('clamps outer LIMIT without touching subquery LIMIT', () => {
     const sql = 'SELECT * FROM (SELECT * FROM property_sales LIMIT 5) x LIMIT 50000';
     const result = validateSQLWithAST(sql);
