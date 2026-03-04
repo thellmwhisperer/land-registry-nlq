@@ -25,6 +25,11 @@ describe('sql-ast-validator', () => {
     expect(result.valid).toBe(true);
   });
 
+  it('allows SELECT from public.property_sales (schema-qualified)', () => {
+    const result = validateSQLWithAST('SELECT * FROM public.property_sales');
+    expect(result.valid).toBe(true);
+  });
+
   it('allows SELECT with subqueries referencing allowed tables', () => {
     const sql = 'SELECT * FROM property_sales WHERE price > (SELECT AVG(price) FROM property_sales) LIMIT 10';
     const result = validateSQLWithAST(sql);

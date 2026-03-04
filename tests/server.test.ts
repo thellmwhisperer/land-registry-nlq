@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('../src/pipeline', () => ({
+vi.mock('../src/pipeline/index.js', () => ({
   ask: vi.fn(),
 }));
 

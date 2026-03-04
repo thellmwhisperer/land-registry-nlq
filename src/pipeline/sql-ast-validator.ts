@@ -231,7 +231,7 @@ export function validateSQLWithAST(sql: string): ValidationResult {
       continue;
     }
 
-    if (schema) {
+    if (schema && !(schema === 'public' && ALLOWED_TABLES.has(name))) {
       return {
         valid: false,
         error: `Query rejected. Table ${schema}.${name} is not in the allowed list.`,

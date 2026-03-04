@@ -1,5 +1,5 @@
 import express from 'express';
-import { ask } from './pipeline';
+import { ask } from './pipeline/index.js';
 
 export const app = express();
 app.use(express.json());
@@ -34,6 +34,8 @@ app.use((err: Error & { status?: number }, _req: express.Request, res: express.R
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}

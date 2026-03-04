@@ -1,4 +1,4 @@
-import { ask } from './pipeline';
+import { ask } from './pipeline/index.js';
 import { shutdown } from './db/client.js';
 
 const question = process.argv[2];
