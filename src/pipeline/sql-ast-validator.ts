@@ -106,11 +106,31 @@ function collectFromAST(node: any, tables: { schema?: string; name: string }[], 
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function hasAggregateFunctions(targetList: any[]): boolean {
-  const json = JSON.stringify(targetList);
-  for (const fn of AGGREGATE_FUNCTIONS) {
-    if (json.toLowerCase().includes(`"sval":"${fn}"`)) return true;
+function hasAggregateFuncCall(node: any): boolean {
+  if (node === null || node === undefined || typeof node !== 'object') return false;
+
+  if (Array.isArray(node)) {
+    return node.some((item) => hasAggregateFuncCall(item));
   }
+
+  if (node.FuncCall) {
+    const fc = node.FuncCall;
+    if (fc.funcname) {
+      for (const part of fc.funcname) {
+        if (part.String?.sval && AGGREGATE_FUNCTIONS.has(part.String.sval.toLowerCase())) {
+          return true;
+        }
+      }
+    }
+    if (fc.agg_within_group || fc.agg_order || fc.agg_distinct) {
+      return true;
+    }
+  }
+
+  for (const key of Object.keys(node)) {
+    if (hasAggregateFuncCall(node[key])) return true;
+  }
+
   return false;
 }
 
@@ -121,7 +141,7 @@ function isAggregateQuery(stmt: Record<string, unknown>): boolean {
   const hasGroupBy = Array.isArray(stmt.groupClause) && stmt.groupClause.length > 0;
   if (hasGroupBy) return true;
 
-  return hasAggregateFunctions(targetList);
+  return hasAggregateFuncCall(targetList);
 }
 
 export function validateSQLWithAST(sql: string): ValidationResult {
@@ -201,7 +221,19 @@ export function validateSQLWithAST(sql: string): ValidationResult {
   const aggregate = isAggregateQuery(selectStmt);
 
   if (!hasLimit && !aggregate) {
-    return { valid: true, sql: `${sql} LIMIT 1000` };
+    const trimmed = sql.replace(/--[^\n]*$/, '').trimEnd();
+    const bounded = `${trimmed} LIMIT 1000`;
+
+    try {
+      const check = parseSync(bounded);
+      if (!check.stmts?.[0]?.stmt?.SelectStmt?.limitCount) {
+        return { valid: false, error: 'Failed to inject LIMIT safely' };
+      }
+    } catch {
+      return { valid: false, error: 'Failed to inject LIMIT safely' };
+    }
+
+    return { valid: true, sql: bounded };
   }
 
   return { valid: true, sql };

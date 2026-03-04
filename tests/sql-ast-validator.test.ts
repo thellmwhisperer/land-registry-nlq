@@ -89,6 +89,25 @@ describe('sql-ast-validator', () => {
     }
   });
 
+  it('strips trailing line comments before injecting LIMIT', () => {
+    const sql = 'SELECT * FROM property_sales -- fetch all';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).not.toContain('--');
+    }
+  });
+
+  it('does not misclassify string literal as aggregate function', () => {
+    const sql = "SELECT 'avg' AS label FROM property_sales";
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1000');
+    }
+  });
+
   it('does not inject LIMIT on aggregate queries', () => {
     const sql = 'SELECT COUNT(*) FROM property_sales';
     const result = validateSQLWithAST(sql);
