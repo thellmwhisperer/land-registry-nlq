@@ -2,7 +2,7 @@
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-81_passing-brightgreen)
-![License](https://img.shields.io/badge/license-ISC-blue)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 Natural language queries over 31 million UK property transactions.
 
@@ -14,7 +14,13 @@ $ npx tsx src/index.ts "What is the most expensive house ever sold in England?"
 £900,000,000 — a property sold on 15 June 2023.
 ```
 
-> Built for the video **I Hacked My AI App in 30 Seconds (and Fixed It with Another AI)** <!-- TODO: add YouTube link when published -->
+## Built on video
+
+This project was built live on [The LLM Whisperer](https://www.youtube.com/@thellmwhisperer) YouTube channel:
+
+| Episode | Video | What it covers |
+|---------|-------|----------------|
+| **Ep 3** | [I Built an AI App That Queries 31 Million Records in Plain English](https://youtu.be/mxUErtQldW8) | Full build from zero: NL-to-SQL pipeline, prompt injection attack, AST-based security fix |
 
 ## How it works
 
@@ -185,7 +191,7 @@ npm test
 
 ## License
 
-ISC
+MIT
 
 ### Data attribution
 
