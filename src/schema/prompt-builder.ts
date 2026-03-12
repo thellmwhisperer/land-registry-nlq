@@ -20,6 +20,7 @@ export function loadSemanticLayer(): string {
 }
 
 export function buildSystemPrompt(semanticLayer: string): string {
+  const currentYear = new Date().getFullYear();
   return `You are a PostgreSQL query generator. Convert the user's natural language question into a single valid PostgreSQL SELECT query against the property_sales table. Output raw SQL only. No markdown, no code fences, no explanations.
 
 <schema>
@@ -46,7 +47,7 @@ User: "What is the most expensive house ever sold in England?"
 SELECT price, date_of_transfer, paon, saon, street, town, district, county, property_type FROM property_sales WHERE property_type IN ('D','S','T','F') ORDER BY price DESC LIMIT 1
 
 User: "Where are the hidden gems? Cheap areas growing fastest."
-WITH prices_2020 AS (SELECT town, ROUND(AVG(price)::numeric, 0) AS avg_2020 FROM property_sales WHERE ppd_category = 'A' AND EXTRACT(YEAR FROM date_of_transfer) = 2020 GROUP BY town HAVING COUNT(*) >= 100), prices_now AS (SELECT town, ROUND(AVG(price)::numeric, 0) AS avg_now FROM property_sales WHERE ppd_category = 'A' AND EXTRACT(YEAR FROM date_of_transfer) = 2025 GROUP BY town HAVING COUNT(*) >= 200) SELECT n.town, n.avg_now AS current_price, p.avg_2020 AS price_2020, ROUND(((n.avg_now - p.avg_2020)::numeric / p.avg_2020 * 100), 0) AS growth_pct FROM prices_now n JOIN prices_2020 p ON n.town = p.town WHERE n.avg_now < 250000 ORDER BY growth_pct DESC LIMIT 10
+WITH prices_2020 AS (SELECT town, ROUND(AVG(price)::numeric, 0) AS avg_2020 FROM property_sales WHERE ppd_category = 'A' AND EXTRACT(YEAR FROM date_of_transfer) = 2020 GROUP BY town HAVING COUNT(*) >= 100), prices_now AS (SELECT town, ROUND(AVG(price)::numeric, 0) AS avg_now FROM property_sales WHERE ppd_category = 'A' AND EXTRACT(YEAR FROM date_of_transfer) = ${currentYear} GROUP BY town HAVING COUNT(*) >= 200) SELECT n.town, n.avg_now AS current_price, p.avg_2020 AS price_2020, ROUND(((n.avg_now - p.avg_2020)::numeric / p.avg_2020 * 100), 0) AS growth_pct FROM prices_now n JOIN prices_2020 p ON n.town = p.town WHERE n.avg_now < 250000 ORDER BY growth_pct DESC LIMIT 10
 
 User: "What has happened to house prices since 2020?"
 SELECT EXTRACT(YEAR FROM date_of_transfer) AS year, COUNT(*) AS transactions, AVG(price) AS avg_price, PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY price) AS median_price FROM property_sales WHERE date_of_transfer >= '2020-01-01' AND ppd_category = 'A' GROUP BY year ORDER BY year

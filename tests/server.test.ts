@@ -178,16 +178,16 @@ describe('server', () => {
     expect(res.body.error).toBe('Internal server error');
   });
 
-  it('allows browser requests when CORS_ORIGIN is unset', async () => {
-    // server.test.ts does not set CORS_ORIGIN — simulates unconfigured env
+  it('blocks browser requests when CORS_ORIGIN is unset (fail-closed)', async () => {
+    // server.test.ts does not set CORS_ORIGIN — should reject cross-origin
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const res = await request(app)
-      .post('/api/query')
+      .options('/api/query')
       .set('Origin', 'https://my-frontend.example.com')
-      .send({ question: 'How many sales in 2020?' });
+      .set('Access-Control-Request-Method', 'POST');
 
-    // Should NOT be blocked by CORS — 400 is fine (input validation), but not CORS error
-    expect(res.status).not.toBe(500);
-    expect(res.headers['access-control-allow-origin']).toBe('https://my-frontend.example.com');
+    expect(res.headers['access-control-allow-origin']).toBeUndefined();
+    spy.mockRestore();
   });
 
   it('does not trust proxy by default (TRUST_PROXY unset)', () => {

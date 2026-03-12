@@ -1,5 +1,9 @@
 -- Create a locked-down read-only role for the NLQ app.
--- Run this as the land_registry superuser / owner.
+-- Run this as the database owner / superuser.
+-- The script derives the owner from current_user so it works
+-- regardless of what the owning role is called.
+
+BEGIN;
 
 -- 1. Create the role (idempotent)
 DO $$
@@ -12,10 +16,14 @@ END
 $$;
 
 -- 2. Revoke inherited PUBLIC privileges (default Postgres grants CONNECT, TEMP, CREATE on public)
-REVOKE ALL ON DATABASE land_registry FROM PUBLIC;
-GRANT CONNECT ON DATABASE land_registry TO land_registry; -- restore owner access
-REVOKE ALL ON DATABASE land_registry FROM nlq_readonly;
-GRANT CONNECT ON DATABASE land_registry TO nlq_readonly;
+DO $$
+BEGIN
+  EXECUTE format('REVOKE ALL ON DATABASE %I FROM PUBLIC', current_database());
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO %I', current_database(), current_user);
+  EXECUTE format('REVOKE ALL ON DATABASE %I FROM nlq_readonly', current_database());
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO nlq_readonly', current_database());
+END
+$$;
 
 -- 3. Lock down schema public — revoke PUBLIC defaults, then grant minimal access
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
@@ -29,9 +37,15 @@ GRANT SELECT ON property_sales TO nlq_readonly;
 -- The AST validator blocks these schemas at the application layer.
 -- Revoke PUBLIC default so nlq_readonly can't inherit it, then restore for the owner.
 REVOKE USAGE ON SCHEMA information_schema FROM PUBLIC;
-GRANT USAGE ON SCHEMA information_schema TO land_registry;
+DO $$
+BEGIN
+  EXECUTE format('GRANT USAGE ON SCHEMA information_schema TO %I', current_user);
+END
+$$;
 REVOKE USAGE ON SCHEMA information_schema FROM nlq_readonly;
 
 -- 5. Per-role defaults: statement timeout + log slow queries
 ALTER ROLE nlq_readonly SET statement_timeout = '10s';
 ALTER ROLE nlq_readonly SET log_min_duration_statement = '5s';
+
+COMMIT;

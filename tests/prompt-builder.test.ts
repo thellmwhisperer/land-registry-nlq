@@ -54,6 +54,13 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('prices_2020');
   });
 
+  it('uses the current year in the prices_now example, not a hardcoded year', () => {
+    const prompt = buildSystemPrompt(fakeSemanticLayer);
+    const currentYear = new Date().getFullYear();
+    expect(prompt).toContain(`EXTRACT(YEAR FROM date_of_transfer) = ${currentYear}`);
+    expect(prompt).not.toContain('EXTRACT(YEAR FROM date_of_transfer) = 2025');
+  });
+
   // XML structure
   it('wraps semantic layer in <schema> tags', () => {
     const prompt = buildSystemPrompt(fakeSemanticLayer);
