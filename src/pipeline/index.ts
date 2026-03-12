@@ -7,6 +7,7 @@ interface Answer {
   question: string;
   sql: string;
   rows: Record<string, unknown>[];
+  truncated: boolean;
   interpretation: string;
 }
 
@@ -41,9 +42,10 @@ export async function ask(question: string): Promise<Answer> {
     sql: validatedSql,
     rows: queryResult.rows,
     rowCount: queryResult.rowCount,
+    truncated: queryResult.truncated,
     fields: queryResult.fields,
   });
   console.log('→ Interpretation complete');
 
-  return { question, sql: validatedSql, rows: queryResult.rows, interpretation };
+  return { question, sql: validatedSql, rows: queryResult.rows, truncated: queryResult.truncated, interpretation };
 }

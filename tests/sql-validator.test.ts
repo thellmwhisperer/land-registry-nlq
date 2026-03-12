@@ -125,4 +125,51 @@ describe('validateSQL', () => {
     const result = validateSQL('SELECT * FROM information_schema.tables');
     expect(result).toEqual({ valid: true, sql: 'SELECT * FROM information_schema.tables' });
   });
+
+  it('rejects REFUSE response from LLM', () => {
+    const result = validateSQL('REFUSE');
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toBe('Question is not about UK property sales');
+    }
+  });
+
+  it('rejects REFUSE with surrounding whitespace', () => {
+    const result = validateSQL('  REFUSE  ');
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects REFUSE with trailing semicolon', () => {
+    const result = validateSQL('REFUSE;');
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects lowercase refuse', () => {
+    const result = validateSQL('refuse');
+    expect(result.valid).toBe(false);
+  });
+
+  it('rejects REFUSE with trailing period', () => {
+    const result = validateSQL('REFUSE.');
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toBe('Question is not about UK property sales');
+    }
+  });
+
+  it('rejects REFUSE with trailing explanation', () => {
+    const result = validateSQL('REFUSE because off topic');
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toBe('Question is not about UK property sales');
+    }
+  });
+
+  it('rejects REFUSE followed by newline and explanation', () => {
+    const result = validateSQL('REFUSE\nThis is not about property sales');
+    expect(result.valid).toBe(false);
+    if (!result.valid) {
+      expect(result.error).toBe('Question is not about UK property sales');
+    }
+  });
 });

@@ -7,6 +7,7 @@ interface InterpretInput {
   sql: string;
   rows: Record<string, unknown>[];
   rowCount: number;
+  truncated?: boolean;
   fields: string[];
 }
 
@@ -20,8 +21,11 @@ NEVER use markdown formatting. No headers (#), no bold (**), no bullet points (-
 
 export async function interpret(input: InterpretInput): Promise<string> {
   const previewRows = input.rows.slice(0, MAX_ROWS_FOR_INTERPRETATION);
-  const truncated = input.rows.length > MAX_ROWS_FOR_INTERPRETATION
+  const previewNote = input.rows.length > MAX_ROWS_FOR_INTERPRETATION
     ? `\n(showing first ${MAX_ROWS_FOR_INTERPRETATION} of ${input.rowCount} rows)`
+    : '';
+  const truncationNote = input.truncated
+    ? `\nNote: results were truncated to ${input.rowCount} rows. The actual total may be higher.`
     : '';
 
   const userMessage = `Question: ${input.question}
@@ -29,7 +33,7 @@ export async function interpret(input: InterpretInput): Promise<string> {
 SQL executed: ${input.sql}
 
 Results (${input.rowCount} row(s), columns: ${input.fields.join(', ')}):
-${JSON.stringify(previewRows, null, 2)}${truncated}`;
+${JSON.stringify(previewRows, null, 2)}${previewNote}${truncationNote}`;
 
   const response = await client.messages.create({
     model: 'claude-haiku-4-5',

@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { buildSystemPrompt, loadSemanticLayer } from '../schema/prompt-builder.js';
+import { buildSystemPrompt, buildUserMessage, loadSemanticLayer } from '../schema/prompt-builder.js';
 import { validateSQL } from './sql-validator.js';
 
 const client = new Anthropic();
@@ -10,7 +10,7 @@ export async function generateSQL(question: string): Promise<string> {
     model: 'claude-haiku-4-5',
     max_tokens: 1024,
     system: systemPrompt,
-    messages: [{ role: 'user', content: question }],
+    messages: [{ role: 'user', content: buildUserMessage(question) }],
   });
 
   const textBlock = response.content.find((block) => block.type === 'text');

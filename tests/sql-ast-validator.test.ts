@@ -77,11 +77,11 @@ describe('sql-ast-validator', () => {
 
   // ── Must auto inject LIMIT ────────────────────────────────────
 
-  it('auto injects LIMIT 1000 when no LIMIT clause is present on non aggregate queries', () => {
+  it('auto injects LIMIT 1001 so the executor can detect truncation', () => {
     const result = validateSQLWithAST('SELECT * FROM property_sales');
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).toContain('LIMIT 1001');
     }
   });
 
@@ -90,7 +90,7 @@ describe('sql-ast-validator', () => {
     const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).toContain('LIMIT 1001');
     }
   });
 
@@ -99,7 +99,7 @@ describe('sql-ast-validator', () => {
     const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).toContain('LIMIT 1001');
       expect(result.sql).not.toContain(';');
     }
   });
@@ -118,7 +118,7 @@ describe('sql-ast-validator', () => {
     const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).toContain('LIMIT 1001');
     }
   });
 
@@ -127,7 +127,7 @@ describe('sql-ast-validator', () => {
     const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).toContain('LIMIT 1001');
     }
   });
 
@@ -136,7 +136,7 @@ describe('sql-ast-validator', () => {
     const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).toContain('LIMIT 1001');
     }
   });
 
@@ -154,36 +154,36 @@ describe('sql-ast-validator', () => {
     const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.sql).not.toContain('LIMIT 1000');
+      expect(result.sql).not.toContain('LIMIT 1001');
     }
   });
 
-  it('clamps LIMIT to 1000 when query specifies a higher value', () => {
+  it('clamps LIMIT to 1001 when query specifies a higher value', () => {
     const sql = 'SELECT * FROM property_sales LIMIT 50000';
     const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).toContain('LIMIT 1001');
       expect(result.sql).not.toContain('50000');
     }
   });
 
-  it('clamps LIMIT ALL to 1000', () => {
+  it('clamps LIMIT ALL to 1001', () => {
     const sql = 'SELECT * FROM property_sales LIMIT ALL';
     const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).toContain('LIMIT 1001');
       expect(result.sql).not.toContain('ALL');
     }
   });
 
-  it('clamps LIMIT NULL to 1000', () => {
+  it('clamps LIMIT NULL to 1001', () => {
     const sql = 'SELECT * FROM property_sales LIMIT NULL';
     const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).toContain('LIMIT 1001');
       expect(result.sql).not.toContain('NULL');
     }
   });
@@ -193,7 +193,7 @@ describe('sql-ast-validator', () => {
     const result = validateSQLWithAST(sql);
     expect(result.valid).toBe(true);
     if (result.valid) {
-      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).toContain('LIMIT 1001');
       expect(result.sql).not.toContain('50000');
     }
   });
@@ -204,7 +204,7 @@ describe('sql-ast-validator', () => {
     expect(result.valid).toBe(true);
     if (result.valid) {
       expect(result.sql).toContain('LIMIT 5');
-      expect(result.sql).toContain('LIMIT 1000');
+      expect(result.sql).toContain('LIMIT 1001');
       expect(result.sql).not.toContain('50000');
     }
   });
@@ -215,6 +215,15 @@ describe('sql-ast-validator', () => {
     expect(result.valid).toBe(true);
     if (result.valid) {
       expect(result.sql).toContain('LIMIT 10');
+    }
+  });
+
+  it('bumps LIMIT 1000 to 1001 for truncation detection', () => {
+    const sql = 'SELECT * FROM property_sales LIMIT 1000';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1001');
     }
   });
 
@@ -343,5 +352,165 @@ describe('sql-ast-validator', () => {
   it('rejects lo_export', () => {
     const result = validateSQLWithAST("SELECT lo_export(1234, '/tmp/out')");
     expect(result.valid).toBe(false);
+  });
+
+  // ── Extended function blocklist ─────────────────────────────────
+
+  it('rejects pg_read_binary_file()', () => {
+    const result = validateSQLWithAST("SELECT pg_read_binary_file('/etc/passwd')");
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('pg_read_binary_file');
+  });
+
+  it('rejects pg_ls_dir()', () => {
+    const result = validateSQLWithAST("SELECT pg_ls_dir('/etc')");
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('pg_ls_dir');
+  });
+
+  it('rejects pg_stat_file()', () => {
+    const result = validateSQLWithAST("SELECT pg_stat_file('/etc/passwd')");
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('pg_stat_file');
+  });
+
+  it('rejects dblink_exec()', () => {
+    const result = validateSQLWithAST("SELECT dblink_exec('host=evil', 'DROP TABLE x')");
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('dblink_exec');
+  });
+
+  it('rejects dblink_connect()', () => {
+    const result = validateSQLWithAST("SELECT dblink_connect('host=evil dbname=prod')");
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('dblink_connect');
+  });
+
+  it('rejects copy_to()', () => {
+    const result = validateSQLWithAST("SELECT copy_to('property_sales', '/tmp/dump')");
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('copy_to');
+  });
+
+  it('rejects copy_from()', () => {
+    const result = validateSQLWithAST("SELECT copy_from('property_sales', '/tmp/evil')");
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('copy_from');
+  });
+
+  it('rejects pg_terminate_backend()', () => {
+    const result = validateSQLWithAST('SELECT pg_terminate_backend(1234)');
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('pg_terminate_backend');
+  });
+
+  it('rejects pg_cancel_backend()', () => {
+    const result = validateSQLWithAST('SELECT pg_cancel_backend(1234)');
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('pg_cancel_backend');
+  });
+
+  it('rejects pg_reload_conf()', () => {
+    const result = validateSQLWithAST('SELECT pg_reload_conf()');
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('pg_reload_conf');
+  });
+
+  it('rejects set_config()', () => {
+    const result = validateSQLWithAST("SELECT set_config('log_statement', 'all', false)");
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('set_config');
+  });
+
+  it('rejects current_setting() for config exfiltration', () => {
+    const result = validateSQLWithAST("SELECT current_setting('data_directory')");
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('current_setting');
+  });
+
+  it('rejects query_to_xml()', () => {
+    const result = validateSQLWithAST("SELECT query_to_xml('SELECT 1', true, false, '')");
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('query_to_xml');
+  });
+
+  it('rejects pg_sleep hidden in a subquery', () => {
+    const sql = 'SELECT * FROM property_sales WHERE price > (SELECT pg_sleep(10)::int) LIMIT 1';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('pg_sleep');
+  });
+
+  it('rejects forbidden function in CTE', () => {
+    const sql = "WITH x AS (SELECT pg_read_file('/etc/passwd') AS content) SELECT * FROM x";
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(false);
+    if (!result.valid) expect(result.error).toContain('pg_read_file');
+  });
+
+  // ── Safe functions must still be allowed ────────────────────────
+
+  it('allows UPPER()', () => {
+    const result = validateSQLWithAST('SELECT UPPER(town) FROM property_sales LIMIT 10');
+    expect(result.valid).toBe(true);
+  });
+
+  it('allows ROUND()', () => {
+    const result = validateSQLWithAST('SELECT ROUND(AVG(price)::numeric, 2) FROM property_sales');
+    expect(result.valid).toBe(true);
+  });
+
+  it('allows EXTRACT()', () => {
+    const result = validateSQLWithAST('SELECT EXTRACT(YEAR FROM date_of_transfer) FROM property_sales LIMIT 10');
+    expect(result.valid).toBe(true);
+  });
+
+  // ── GROUP BY LIMIT injection ────────────────────────────────────
+
+  it('injects LIMIT on GROUP BY with ORDER BY', () => {
+    const sql = 'SELECT town, AVG(price) AS avg FROM property_sales GROUP BY town ORDER BY avg DESC';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1001');
+    }
+  });
+
+  it('injects LIMIT on GROUP BY without ORDER BY', () => {
+    const sql = 'SELECT town, AVG(price) FROM property_sales GROUP BY town';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1001');
+    }
+  });
+
+  it('does not inject LIMIT on GROUP BY that already has one', () => {
+    const sql = 'SELECT town, AVG(price) FROM property_sales GROUP BY town LIMIT 50';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 50');
+      expect(result.sql).not.toContain('LIMIT 1001');
+    }
+  });
+
+  it('clamps explicit LIMIT on unordered GROUP BY', () => {
+    const sql = 'SELECT town, AVG(price) FROM property_sales GROUP BY town LIMIT 500000';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).toContain('LIMIT 1001');
+      expect(result.sql).not.toContain('500000');
+    }
+  });
+
+  it('does not inject LIMIT on pure aggregate (no GROUP BY)', () => {
+    const sql = 'SELECT AVG(price) FROM property_sales';
+    const result = validateSQLWithAST(sql);
+    expect(result.valid).toBe(true);
+    if (result.valid) {
+      expect(result.sql).not.toContain('LIMIT');
+    }
   });
 });

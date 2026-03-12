@@ -18,6 +18,7 @@ vi.mock('../src/db/client.js', () => ({
 
 vi.mock('../src/schema/prompt-builder.js', () => ({
   buildSystemPrompt: () => 'system prompt',
+  buildUserMessage: (q: string) => q,
   loadSemanticLayer: () => '# Semantic Layer',
 }));
 
@@ -38,11 +39,13 @@ describe('ask (pipeline)', () => {
     mockQuery
       .mockResolvedValueOnce(undefined) // BEGIN
       .mockResolvedValueOnce(undefined) // SET LOCAL statement_timeout
-      .mockResolvedValueOnce({
+      .mockResolvedValueOnce(undefined) // DECLARE cursor
+      .mockResolvedValueOnce({          // FETCH
         rows: [{ avg: 523000 }],
         rowCount: 1,
         fields: [{ name: 'avg' }],
       })
+      .mockResolvedValueOnce(undefined) // CLOSE cursor
       .mockResolvedValueOnce(undefined); // COMMIT
 
     mockCreate.mockResolvedValueOnce({

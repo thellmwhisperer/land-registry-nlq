@@ -10,6 +10,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
 
 vi.mock('../src/schema/prompt-builder.js', () => ({
   buildSystemPrompt: () => 'system prompt here',
+  buildUserMessage: (q: string) => `<user_query>\n${q}\n</user_query>`,
   loadSemanticLayer: () => '# Semantic Layer',
 }));
 
@@ -33,7 +34,7 @@ describe('generateSQL', () => {
         model: 'claude-haiku-4-5',
         max_tokens: 1024,
         system: 'system prompt here',
-        messages: [{ role: 'user', content: 'What is the average house price in London?' }],
+        messages: [{ role: 'user', content: '<user_query>\nWhat is the average house price in London?\n</user_query>' }],
       }),
     );
   });
