@@ -21,7 +21,7 @@ This project was built live on [The LLM Whisperer](https://www.youtube.com/@thel
 | Episode | Video | What it covers |
 |---------|-------|----------------|
 | **Ep 3** | [I Built an AI App That Queries 31 Million Records in Plain English](https://youtu.be/mxUErtQldW8) | Full build from zero: NL-to-SQL pipeline, prompt injection attack, AST-based security fix |
-| **Ep 4** | Coming soon | 6 security layers: input validation, prompt hardening, AST upgrade, DB hardening, output sanitization, middleware |
+| **Ep 4** | [Cybersecurity Expert Hacked My AI App](https://youtu.be/CurXpds_tAQ) | 6 security layers: input validation, prompt hardening, AST upgrade, DB hardening, output sanitization, middleware |
 
 ## How it works
 
