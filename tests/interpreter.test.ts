@@ -52,4 +52,24 @@ describe('interpret', () => {
 
     expect(result).toBe('No results were found for that query.');
   });
+
+  it('includes truncation notice in prompt when results are capped', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: 'Over 1000 sales were found.' }],
+    });
+
+    await interpret({
+      question: 'Show me all sales in London',
+      sql: "SELECT * FROM property_sales WHERE town = 'LONDON'",
+      rows: Array.from({ length: 50 }, (_, i) => ({ price: i })),
+      rowCount: 1000,
+      truncated: true,
+      fields: ['price'],
+    });
+
+    const call = mockCreate.mock.calls[0][0];
+    const userMsg = call.messages[0].content;
+    expect(userMsg).toContain('truncated');
+    expect(userMsg).toContain('1000');
+  });
 });

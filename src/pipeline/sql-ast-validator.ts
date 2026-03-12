@@ -15,11 +15,32 @@ export type ValidationResult =
 const ALLOWED_TABLES = new Set(['property_sales']);
 
 const FORBIDDEN_FUNCTIONS = new Set([
+  // DoS
   'pg_sleep',
+  // Filesystem access
   'pg_read_file',
-  'dblink',
+  'pg_read_binary_file',
+  'pg_ls_dir',
+  'pg_stat_file',
+  // Large object smuggling
   'lo_import',
   'lo_export',
+  // External connections
+  'dblink',
+  'dblink_exec',
+  'dblink_connect',
+  // Data import/export
+  'copy_to',
+  'copy_from',
+  // Backend control
+  'pg_terminate_backend',
+  'pg_cancel_backend',
+  'pg_reload_conf',
+  // Config read/write
+  'set_config',
+  'current_setting',
+  // Query re-execution / exfiltration
+  'query_to_xml',
 ]);
 
 const AGGREGATE_FUNCTIONS = new Set([
@@ -250,12 +271,17 @@ export function validateSQLWithAST(sql: string): ValidationResult {
   }
 
   const MAX_LIMIT = 1000;
-  const aggregate = isAggregateQuery(selectStmt);
+  const hasGroupBy = Array.isArray(selectStmt.groupClause) && selectStmt.groupClause.length > 0;
+  const pureAggregate = isAggregateQuery(selectStmt) && !hasGroupBy;
+  const skipLimit = pureAggregate;
   const hasLimit = selectStmt.limitCount !== undefined;
 
-  if (!hasLimit && !aggregate) {
+  // Inject MAX_LIMIT + 1 so the executor can detect overflow and signal truncation
+  const INJECT_LIMIT = MAX_LIMIT + 1;
+
+  if (!hasLimit && !skipLimit) {
     const trimmed = sql.trimEnd().replace(/;\s*$/, '');
-    const bounded = `${trimmed} LIMIT ${MAX_LIMIT}`;
+    const bounded = `${trimmed} LIMIT ${INJECT_LIMIT}`;
 
     try {
       const check = parseSync(bounded) as ParseResult;
@@ -270,21 +296,21 @@ export function validateSQLWithAST(sql: string): ValidationResult {
     return { valid: true, sql: bounded };
   }
 
-  if (hasLimit && !aggregate) {
+  if (hasLimit && !pureAggregate) {
     const limitNode = selectStmt.limitCount as ASTNode;
     const aConst = (limitNode as { A_Const?: { ival?: { ival?: number }; isnull?: boolean; location?: number } }).A_Const;
     const ival = aConst?.ival?.ival;
     const isNull = aConst?.isnull === true;
     const loc = aConst?.location;
 
-    const needsClamp = isNull || (typeof ival === 'number' && ival > MAX_LIMIT);
+    const needsClamp = isNull || (typeof ival === 'number' && ival >= MAX_LIMIT);
 
     if (needsClamp && typeof loc === 'number') {
       // location is a byte offset — use Buffer for correct slicing
       const buf = Buffer.from(sql, 'utf-8');
       const before = buf.subarray(0, loc).toString('utf-8');
       const after = buf.subarray(loc).toString('utf-8');
-      const afterClamped = after.replace(/^(?:\d+|ALL|NULL)/i, String(MAX_LIMIT));
+      const afterClamped = after.replace(/^(?:\d+|ALL|NULL)/i, String(INJECT_LIMIT));
       return { valid: true, sql: before + afterClamped };
     }
   }

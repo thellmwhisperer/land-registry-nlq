@@ -38,6 +38,8 @@ There is a single table: `property_sales` in the `public` schema.
 - `idx_ps_property_type` on `property_type`
 - `idx_ps_ppd_category` on `ppd_category`
 - `idx_ps_date_category` on `(date_of_transfer, ppd_category)`
+- `idx_ps_town_cat_price` on `(town, ppd_category) INCLUDE (price)` — index-only scan for aggregations filtered by town
+- `idx_ps_price_desc` on `(price DESC)` — fast ORDER BY price DESC for superlative queries
 
 ## Coded Values
 

@@ -36,6 +36,10 @@ export function validateSQL(raw: string): ValidationResult {
   // Strip trailing semicolon
   sql = sql.replace(/;\s*$/, '');
 
+  if (/^REFUSE\b/i.test(sql)) {
+    return { valid: false, error: 'Question is not about UK property sales' };
+  }
+
   if (FORBIDDEN_PATTERN.test(sql)) {
     const keyword = sql.match(FORBIDDEN_PATTERN)![1].toUpperCase();
     return { valid: false, error: `${keyword} statements are not allowed` };

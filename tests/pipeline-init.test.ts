@@ -21,6 +21,7 @@ vi.mock('../src/db/client.js', () => ({
 
 vi.mock('../src/schema/prompt-builder.js', () => ({
   buildSystemPrompt: () => 'prompt',
+  buildUserMessage: (q: string) => q,
   loadSemanticLayer: () => '# layer',
 }));
 
