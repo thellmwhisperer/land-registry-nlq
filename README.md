@@ -6,6 +6,15 @@
 
 Natural language queries over 31 million UK property transactions.
 
+> **Watch the full build on YouTube:**
+> [Ep 3: Build from scratch](https://youtu.be/mxUErtQldW8) |
+> [Ep 4: Security layers](https://youtu.be/CurXpds_tAQ) |
+> [The LLM Whisperer](https://youtube.com/@thellmwhisperer)
+>
+> Built using the [human.md](https://github.com/thellmwhisperer/human.md) framework for healthy AI-assisted development.
+
+If you find this useful, please ⭐ the repo — it helps others discover it.
+
 Ask questions in plain English, get answers from every property sale in England & Wales since 1995.
 
 ```
@@ -13,15 +22,6 @@ $ npx tsx src/index.ts "What is the most expensive house ever sold in England?"
 
 £900,000,000 — a property sold on 15 June 2023.
 ```
-
-## Built on video
-
-This project was built live on [The LLM Whisperer](https://www.youtube.com/@thellmwhisperer) YouTube channel:
-
-| Episode | Video | What it covers |
-|---------|-------|----------------|
-| **Ep 3** | [I Built an AI App That Queries 31 Million Records in Plain English](https://youtu.be/mxUErtQldW8) | Full build from zero: NL-to-SQL pipeline, prompt injection attack, AST-based security fix |
-| **Ep 4** | [Cybersecurity Expert Hacked My AI App](https://youtu.be/CurXpds_tAQ) | 6 security layers: input validation, prompt hardening, AST upgrade, DB hardening, output sanitization, middleware |
 
 ## How it works
 
@@ -270,3 +270,7 @@ MIT
 ### Data attribution
 
 Contains HM Land Registry data © Crown copyright and database right 2021. Licensed under the [Open Government Licence v3.0](https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
+
+---
+
+Built by [@TheLLMWhisperer](https://youtube.com/@thellmwhisperer) · [Twitter](https://x.com/TheLLMWhisperer) · [LinkedIn](https://linkedin.com/in/javiermellado)
